@@ -1,0 +1,353 @@
+﻿/*==
+NOTE:
+------
+PLACE HERE YOUR OWN JS CODES AND IF NEEDED.
+WE WILL RELEASE FUTURE UPDATES SO IN ORDER TO NOT OVERWRITE YOUR CUSTOM SCRIPT IT'S BETTER LIKE THIS. */
+var _dt;
+var _instance1;
+var picker;
+function setDatePick(_element,format) {
+    if (picker != null) {
+        picker.destroy();
+    }
+    moment.locale('id');
+    var ruDate = {
+        months: ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'],
+        weekdays: ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'],
+        weekdaysShort: ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
+    };
+
+    var picker = [];
+    _element.each(function (idx) {
+        picker[idx] = new Pikaday({
+            field: $(this)[0],
+            //format: "dddd,DD MMMM YYYY",
+            format: format,
+            placeholder: "Masukkan tanggal sim berlaku",
+            i18n: ruDate
+        });
+    });
+    return picker;
+}
+function initTable(_element, _url, _myParam, _myColumn, stringkosong) {
+    if (_dt != null) {
+        _dt.destroy();
+    }
+    _dt = _element.DataTable(
+        {
+            destroy: true,
+            "serverSide": true,
+            dom: 'Blfrtip',
+            buttons: [
+                'copy', 'csv', 'excel', 'pdf', 'print'
+            ],
+            "ajax": {
+                "url": _url,
+                "type": "POST",
+                "datatype": "json",
+                "data": _myParam,
+                "complete": function (xhr, responseJSON) {
+                    //console.log(xhr.responseJSON.data);
+                    //console.log(responseJSON); //*** responseJSON: Array[0]
+                },
+                "complete": function (xhr, error, thrown) {
+                    console.log(xhr);
+                    console.log(error);
+                    console.log(thrown);
+                }
+            },
+            "columns": _myColumn,
+            "processing": true,
+            "pagingType": "full_numbers",
+            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
+            "scrollX": true,
+            "order": [
+                [0, "desc"]
+            ],
+            "language": {
+                "decimal": ",",
+                "thousands": ".",
+                "emptyTable": "Tidak ada data",
+                "info": "Showing _START_ to _END_ from _TOTAL_ data entries",
+                "infoEmpty": "Data kosong",
+                "loadingRecords": "Proses menampilkan data...",
+                "processing": "Memproses data.Harap menunggu...",
+                "search": "Cari:",
+                "zeroRecords": "No matching records found",
+                "paginate": {
+                    "first": "First",
+                    "last": "Last",
+                    "next": "Next",
+                    "previous": "Previous"
+                }
+            }
+        });
+}
+
+function select2(_element, _url, _placeholder) {
+    _element.select2({
+        minimumInputLength: 3,
+        placeholder: {
+            id: 0,
+            text: _placeholder
+        },
+        ajax: {
+            url: _url,
+            dataType: 'json',
+            delay: 250,
+            type: "GET",
+            quietMillis: 50,
+            data: function (params) {
+                return {
+                    q: params.term// search term
+                };
+            },
+            processResults: function (data) {
+                return {
+                    results: $.map(data, function (item) {
+                        return {
+                            text: item.text,
+                            id: item.id
+                        }
+                    })
+                };
+            }
+        }
+    });
+}
+
+function deleteItemProcess(_url, _object, refreshCallback) {
+    swal({
+        title: 'Apakah anda yakin?',
+        text: "Ketika anda menghapus suatu item, anda tidak akan bisa mengembalikan ulang item tersebut !",
+        type: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#0CC27E',
+        cancelButtonColor: '#FF586B',
+        confirmButtonText: 'Ya, hapus item!',
+        cancelButtonText: 'Tidak!',
+        confirmButtonClass: 'btn btn-success mr-5',
+        cancelButtonClass: 'btn btn-danger',
+        buttonsStyling: false
+    }).then(function () {
+
+        if (_object != null) {
+            $.ajax({
+                type: "POST",
+                url: _url,
+                data: JSON.stringify(_object),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (response) {
+                    console.log("success");
+                    showSuccess("Data berhasil terupdate");
+                    refreshCallback();
+                },
+                failure: function (response) {
+                    console.log("failure");
+
+                },
+                error: function (response) {
+                    console.log("error");
+
+                }
+            });
+        }
+    }, function (dismiss) {
+        // dismiss can be 'overlay', 'cancel', 'close', 'esc', 'timer'
+        if (dismiss === 'cancel') {
+            swal(
+                'Cancelled',
+                'OK :)',
+                'error'
+            )
+        }
+    })
+}
+
+function postData(_data, _url, _element, _element2, refreshCallback) {
+    if (_data != null) {
+        $("#preloader").show();
+        $.ajax({
+            type: "POST",
+            url: _url,
+            data: JSON.stringify(_data),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (response) {
+                $("#preloader").hide();
+                if (_element != null) _element.val('');
+                if (_element2 != null) _element2.empty();
+                showSuccess("Data berhasil terupdate");
+                refreshCallback();
+            },
+            failure: function (response) {
+                $("#preloader").hide();
+                showError(response.responseText);
+            },
+            error: function (response) {
+                $("#preloader").hide();
+                showError(response.responseText);
+            }
+        });
+    }
+}
+
+function showSuccess(_text, _head) {
+    toastr.success(_text, _head == null ? "Berhasil" : _head, {
+        timeOut: "5000",
+        progressBar: !0,
+        showMethod: "slideDown",
+        hideMethod: "slideUp"
+    });
+}
+function showInfo() {
+
+}
+function showWarning(_text, _head) {
+    var head = _head == null ? "Warning" : _head;
+    toastr.warning(_text, head, {
+        timeOut: "10000",
+        progressBar: !0,
+        showMethod: "slideDown",
+        hideMethod: "slideUp"
+    })
+
+}
+function showError(_text, _head) {
+    var head = _head == null ? "Failure" : _head;
+    toastr.error(_text, head, {
+        timeOut: "10000",
+        progressBar: !0,
+        showMethod: "slideDown",
+        hideMethod: "slideUp"
+    })
+}
+function barChart(e, data, label, max) {
+    if (e) {
+        var t = echarts.init(e);
+        t.setOption({
+            legend: {
+                borderRadius: 0,
+                orient: "horizontal",
+                x: "right",
+                data: ["Menit"]
+            },
+            grid: {
+                left: "8px",
+                right: "8px",
+                bottom: "0",
+                containLabel: !0
+            },
+            tooltip: {
+                show: !0,
+                backgroundColor: "rgba(0, 0, 0, .8)"
+            },
+            xAxis: [{
+                type: "category",
+                data: label,
+                axisTick: {
+                    alignWithLabel: !0
+                },
+                splitLine: {
+                    show: !1
+                },
+                axisLine: {
+                    show: !0
+                }
+            }],
+            yAxis: [{
+                type: "value",
+                axisLabel: {
+                    formatter: "{value}"
+                },
+                min: 0,
+                max: max,
+                interval: 25e3,
+                axisLine: {
+                    show: !1
+                },
+                splitLine: {
+                    show: !0,
+                    interval: "auto"
+                }
+            }],
+            series: [{
+                data: data,
+                type: "bar"
+            }]
+        }), $(window).on("resize", function () {
+            setTimeout(function () {
+                t.resize()
+            }, 500)
+        })
+    }
+}
+function detailDataProcess(_object, _url, CallBack) {
+    var rv = new Object();
+    $.ajax({
+        type: "POST",
+        url: _url,
+        data: JSON.stringify(_object),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            rv.tipe = "success";
+            rv.response = response;
+            CallBack(rv);
+        },
+        failure: function (response) {
+            rv.tipe = "failure";
+            rv.response = response;
+            CallBack(rv);
+        },
+        error: function (response) {
+
+            rv.tipe = "error";
+            rv.response = response;
+            CallBack(rv);
+
+        }
+    });
+}
+//$('#custom_table').DataTable(
+//    {
+//        "order": [
+//            [0, "desc"]
+//        ],
+//        "pagingType": "full_numbers",
+//        "scrollX": true,
+//        "language": {
+//            "decimal": ",",
+//            "thousands": ".",
+//            "emptyTable": "Tidak ada data",
+//            "info": "Menampilkan _START_ ke _END_ dari _TOTAL_ data",
+//            "infoEmpty": "Data kosong",
+//            "infoFiltered": "(menyaring dari _MAX_ total data)",
+//            "loadingRecords": "Proses menampilkan data...",
+//            "processing": "Sistro memproses data.Harap menunggu...",
+//            "search": "Cari:",
+//            "zeroRecords": "No matching records found",
+//            "paginate": {
+//                "first": "First",
+//                "last": "Last",
+//                "next": "Next",
+//                "previous": "Previous"
+//            },
+//        }
+//    });
+
+//function initTable(element, _url, _myParam, _myColumn, stringkosong)
+//{
+//    if (_dt != null) {
+//        _dt.destroy();
+//        //element.empty();
+//    }
+
+//    _dt = element.DataTable({
+//        "processing": true,
+//        "serverSide": true,
+//        "ajax": "../server_side/scripts/server_processing.php"
+//    });
+//}
+
